@@ -109,11 +109,15 @@ class AI(commands.Cog):
         # Always respond in DMs
         if context_info['is_dm']:
             return True
-        
+
+        # Always respond in threads
+        if context_info['is_thread']:
+            return True
+
         # Respond if mentioned
         if self.bot.user in message.mentions:
             return True
-            
+
         return False
 
     async def get_ai_response(self, messages):
@@ -142,29 +146,33 @@ class AI(commands.Cog):
     # Main bot function: listen to every single message, and later determine if the user is prompting the bot
     @commands.Cog.listener()
     async def on_message(self, message):
+        # Ignore messages sent by the bot itself to prevent infinite loop
+        if message.author == self.bot.user:
+            return
+
         context_info = self.get_message_context(message)
-        
+
         # Check if user is trying to prompt the bot in a forbidden channel
         if not self.should_respond_to_message(message, context_info):
             return
-            
+
         try:
             async with message.channel.typing():
                 history = await self.build_message_history(message, context_info)
-                
+
                 # Build messages array
                 messages = []
-                
+
                 # Add prompt doc
                 if self.PROMPT_DOC.strip():
                     messages.append({"role": "system", "content": self.PROMPT_DOC.strip()})
-                
+
                 # Add message history with clear separation SO IT ACTUALLY READS THE PROMPT
                 if history:
                     messages.append({"role": "system", "content": "--- Previous conversation history for context ---"})
                     messages.extend(history)
                     messages.append({"role": "system", "content": "--- End of history. The user's current message is below ---"})
-                
+
                 # Add current message with emphasis
                 current_content = message.content.strip()
                 if not context_info['is_dm']:
@@ -176,7 +184,7 @@ class AI(commands.Cog):
 
                 # Make API request based on provider
                 response_text = await self.get_ai_response(messages)
-                
+
                 # Clean up response
                 response_text = response_text.strip()
                 if (response_text.startswith('"') and response_text.endswith('"')) or \
@@ -189,16 +197,16 @@ class AI(commands.Cog):
 
                 # Send response
                 await message.reply(response_text, mention_author=False)
-                
-        except Exception as e:
-                logging.error(f"Error in on_message: {e}")
 
-                error_msg = "An error occurred while processing your request."
-                if "timeout" in str(e).lower():
-                    error_msg += " [ Timeout. ]"
-                elif "rate limit" in str(e).lower():
-                    error_msg += " [ Rate limit. ]"
-                await message.reply(error_msg, mention_author=False)
+        except Exception as e:
+            logging.error(f"Error in on_message: {e}")
+
+            error_msg = "An error occurred while processing your request."
+            if "timeout" in str(e).lower():
+                error_msg += " [ Timeout. ]"
+            elif "rate limit" in str(e).lower():
+                error_msg += " [ Rate limit. ]"
+            await message.reply(error_msg, mention_author=False)
 
 async def setup(bot):
     bot.add_cog(AI(bot))
