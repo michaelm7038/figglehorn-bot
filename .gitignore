@@ -1,0 +1,9 @@
+# Project ignores
+.github/
+
+.venv/
+.github/
+
+.env
+
+cogs/__pycache__/
