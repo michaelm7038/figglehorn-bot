@@ -6,6 +6,10 @@ import logging
 from datetime import datetime
 
 class AI(commands.Cog):
+    @commands.command(name="trigger")
+    async def trigger(self, ctx):
+        await ctx.send(f"<@1407221067264692275>")
+
     def __init__(self, bot):
         self.bot = bot
         self.user_chats = {}
@@ -112,6 +116,10 @@ class AI(commands.Cog):
 
         # Always respond in threads
         if context_info['is_thread']:
+            return True
+
+        # Respond to any message that is a reply
+        if message.reference is not None:
             return True
 
         # Respond if mentioned
